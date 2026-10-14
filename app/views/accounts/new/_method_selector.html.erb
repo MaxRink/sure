@@ -22,7 +22,7 @@
         connect providers whose credential is scoped to the single connection
         they authenticate (see ProviderItemOwnable). %>
     <% provider_configs.each do |config| %>
-      <% next unless Current.user&.admin? || config[:member_connectable] %>
+      <% next unless Current.user&.admin_for?(Current.family) || (config[:member_connectable] && Current.user&.member_for?(Current.family)) %>
       <% link_path = config[:new_account_path].call(accountable_type, params[:return_to]) %>
       <% is_lunchflow = config[:key] == "lunchflow" %>
 

@@ -4,7 +4,43 @@ class Current < ActiveSupport::CurrentAttributes
   attribute :session
   attribute :latest_sync_by_syncable, :latest_completed_sync_by_syncable, :syncing_by_syncable
 
-  delegate :family, to: :user, allow_nil: true
+  # `user.family` is the immutable home family for backwards compatibility.
+  # Requests may select another family only after membership authorization.
+  def family
+    active_family || user&.family
+  end
+
+  def active_family
+    return @active_family if defined?(@active_family)
+    return @active_family = nil unless user
+
+    family_id = @requested_family_id || session&.data&.[]("active_family_id")
+    @active_family = if family_id.present?
+      candidate = Family.find_by(id: family_id)
+      candidate if candidate && user.member_of?(candidate)
+    end
+  end
+
+  def select_family!(candidate)
+    raise ArgumentError, "user is not a member of this family" unless user&.member_of?(candidate)
+
+    @requested_family_id = candidate.id
+    @active_family = candidate
+    if session&.persisted?
+      session.data = (session.data || {}).merge("active_family_id" => candidate.id)
+      session.save!
+    end
+    candidate
+  end
+
+  def clear_selected_family!
+    @requested_family_id = nil
+    @active_family = nil
+    if session&.persisted?
+      session.data = (session.data || {}).except("active_family_id")
+      session.save!
+    end
+  end
 
   def user
     impersonated_user || session&.user

@@ -30,7 +30,7 @@ class ProcessPdfJob < ApplicationJob
       end
 
       # Find the user who created this import (first admin or any user in the family)
-      user = pdf_import.family.users.find_by(role: :admin) || pdf_import.family.users.first
+      user = pdf_import.family.admins.first || pdf_import.family.members.first
 
       if user
         pdf_import.send_next_steps_email(user)

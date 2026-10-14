@@ -477,7 +477,7 @@ class Settings::HostingsController < ApplicationController
     end
 
     def ensure_admin
-      redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.admin?
+      redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.admin_for?(Current.family)
     end
 
     def ensure_super_admin_for_onboarding

@@ -14,3 +14,12 @@ json.custom_enabled_currencies @family.custom_enabled_currencies?
 json.enabled_currencies @family.enabled_currency_codes
 json.created_at @family.created_at.iso8601
 json.updated_at @family.updated_at.iso8601
+json.active true
+json.memberships do
+  json.array! Current.user.families.order(:id) do |family|
+    json.id family.id
+    json.name family.name
+    json.home Current.user.family_id == family.id
+    json.role Current.user.membership_for(family)&.role
+  end
+end

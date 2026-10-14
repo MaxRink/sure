@@ -144,7 +144,7 @@ class AccountStatementsController < ApplicationController
     end
 
     def ensure_statement_manager!
-      return if AccountStatement.statement_manager?(Current.user)
+      return if AccountStatement.statement_manager?(Current.user, Current.family)
 
       redirect_to accounts_path, alert: t("accounts.not_authorized")
     end

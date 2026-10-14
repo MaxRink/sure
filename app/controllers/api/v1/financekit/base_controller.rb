@@ -16,7 +16,7 @@ class Api::V1::Financekit::BaseController < Api::V1::BaseController
     # StoreKit, which the server has no way to check and does not try to.
     def require_financekit_access
       return unless authorize_scope!(request.get? || request.head? ? :read : :write)
-      raise Financekit::Error.new("publisher_forbidden", 403) unless current_resource_owner.admin?
+      raise Financekit::Error.new("publisher_forbidden", 403) unless current_resource_owner.admin_for?(Current.family)
     end
 
     def connection

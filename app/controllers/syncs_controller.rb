@@ -10,7 +10,7 @@ class SyncsController < ApplicationController
     # cancelling their syncs requires admin too. Family- and account-level
     # syncs stay member-cancellable (the accounts page shows those buttons
     # to every member).
-    unless sync.syncable.is_a?(Account) || sync.syncable.is_a?(Family) || Current.user.admin?
+    unless sync.syncable.is_a?(Account) || sync.syncable.is_a?(Family) || Current.user.admin_for?(Current.family)
       raise ActiveRecord::RecordNotFound
     end
 

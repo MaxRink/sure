@@ -23,7 +23,7 @@
   <%# instance it is the operator's call, not a family's — and the settings page %>
   <%# itself is gated the same way, so offering either control to anyone else is %>
   <%# a dead end. The warning text stands on its own. %>
-  <% if self_hosted? && Current.user.admin? %>
+  <% if self_hosted? && Current.user.admin_for?(Current.family) %>
     <div class="flex flex-wrap items-center gap-2 -mt-2">
     <% if missing.include?(:crypto_provider) %>
       <%= render DS::Button.new(

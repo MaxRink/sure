@@ -256,7 +256,9 @@ module Api
         )
 
         if invitation.present?
-          # Accept the pending invitation: join the existing family
+          # Accept the pending invitation: the initial home family is the
+          # invitation family; membership records make later multi-family
+          # invitations safe without moving owned data.
           user.family_id = invitation.family_id
           user.role = invitation.role
         else
@@ -283,13 +285,11 @@ module Api
               raise ActiveRecord::Rollback
             end
 
-            # Mark invitation as accepted if one was used
-            invitation&.update!(accepted_at: Time.current)
-
-            # Joining an existing family via invitation must honor the family's
-            # default sharing policy, matching Invitation#accept_for, so a mobile
-            # SSO invitee sees the accounts the family shares by default.
-            user.family.auto_share_existing_accounts_with(user) if invitation.present?
+            if invitation.present?
+              # User's after-create hook creates the initial home-family
+              # membership with the invitation role.
+              invitation.update!(accepted_at: Time.current)
+            end
 
             identity = OidcIdentity.create_from_omniauth(build_omniauth_hash(cached), user)
             true

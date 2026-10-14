@@ -8,7 +8,7 @@
 module Assistant::Function::StatementVaultSupport
   private
     def statement_manager?
-      AccountStatement.statement_manager?(user)
+      AccountStatement.statement_manager?(user, family)
     end
 
     def not_a_statement_manager

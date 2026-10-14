@@ -27,7 +27,11 @@ class UsersController < ApplicationController
       end
     else
       was_ai_enabled = @user.ai_enabled
-      if @user.update(user_params.except(:redirect_to, :delete_profile_image))
+      permitted_params = user_params
+      family_attributes = permitted_params.delete(:family_attributes)
+      Current.family.update!(family_attributes.except(:id)) if family_attributes.present?
+
+      if @user.update(permitted_params.except(:redirect_to, :delete_profile_image))
         @user.profile_image.purge if should_purge_profile_image?
 
         # Add a special notice if AI was just enabled or disabled
@@ -115,7 +119,7 @@ class UsersController < ApplicationController
 
     def user_params
       family_attrs = [ :name, :currency, :country, :date_format, :timezone, :locale, :month_start_day, :id ]
-      if Current.user.admin?
+      if Current.user.admin_for?(Current.family)
         family_attrs.push(:personal_budgets, :household_budget_enabled) # Needed for updating existing family
         family_attrs.push(:moniker, :default_account_sharing)
         family_attrs << { enabled_currencies: [] }
@@ -147,7 +151,7 @@ class UsersController < ApplicationController
     end
 
     def ensure_admin
-      return true if Current.user.admin?
+      return true if Current.user.admin_for?(Current.family)
 
       redirect_to settings_profile_path, alert: I18n.t("users.reset.unauthorized")
       false
