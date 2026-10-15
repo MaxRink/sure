@@ -13,7 +13,8 @@ development:
 
 test:
   <<: *default
-  database: <%= ENV.fetch("POSTGRES_DB") { "sure_test" } %>
+  url: "<%= ENV["SURE_TEST_DATABASE_URL"] || "postgresql://127.0.0.1:5432/sure_test" %>"
+  database: "<%= ENV["SURE_TEST_DB_NAME"] || "sure_test" %>"
 
 production:
   <<: *default
