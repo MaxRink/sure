@@ -1,0 +1,25 @@
+<% content_for :page_title, "Families" %>
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-bold">Families</h1>
+    <p class="text-sm text-gray-500">Choose the family space you are working in. Accounts and provider connections stay with their original family.</p>
+    <% if Current.user&.super_admin? %>
+      <%= link_to "Create family space", new_settings_family_path, class: "btn btn-primary mt-3" %>
+    <% end %>
+  </div>
+  <div class="divide-y rounded-lg border bg-white">
+    <% @families.each do |family| %>
+      <div class="flex items-center justify-between p-4">
+        <div>
+          <div class="font-medium"><%= family.name.presence || "Unnamed family" %></div>
+          <div class="text-sm text-gray-500"><%= family.members.count %> members</div>
+        </div>
+        <% if Current.family&.id == family.id %>
+          <span class="text-sm font-medium text-green-700">Active</span>
+        <% else %>
+          <%= button_to "Switch", settings_family_path(family), method: :patch, class: "btn btn-secondary" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

@@ -72,8 +72,9 @@ class AccountStatement < ApplicationRecord
   }
 
   class << self
-    def statement_manager?(user)
-      user&.admin? || user&.member?
+    def statement_manager?(user, family = nil)
+      family ||= user&.family
+      user&.member_for?(family)
     end
 
     def create_from_upload!(family:, account:, file:)
@@ -232,15 +233,15 @@ class AccountStatement < ApplicationRecord
   def viewable_by?(user)
     return false unless user&.family_id == family_id
 
-    account.present? ? account.shared_with?(user) : self.class.statement_manager?(user)
+    account.present? ? account.shared_with?(user) : self.class.statement_manager?(user, family)
   end
 
   def manageable_by?(user)
     return false unless user&.family_id == family_id
 
-    return self.class.statement_manager?(user) if account.blank?
+    return self.class.statement_manager?(user, family) if account.blank?
 
-    account.permission_for(user).in?([ :owner, :full_control ]) && self.class.statement_manager?(user)
+    account.permission_for(user).in?([ :owner, :full_control ]) && self.class.statement_manager?(user, family)
   end
 
   def link_to_account!(target_account, confidence: 1.0)

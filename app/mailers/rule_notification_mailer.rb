@@ -9,7 +9,7 @@ class RuleNotificationMailer < ApplicationMailer
     # recipient set to a regular member/guest. super_admin is the family owner
     # and must be included (see User#admin?); a self-hosted family is commonly a
     # single super_admin. Skip delivery entirely when there is no admin.
-    recipient = @family.users.find_by(role: %w[admin super_admin])
+    recipient = @family.admins.first || @family.members.find_by(role: "super_admin")
     return if recipient.nil?
 
     mail(

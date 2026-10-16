@@ -43,7 +43,7 @@
         <% if @user.family.uses_custom_month_start? %>
           <%= render DS::Alert.new(message: t(".month_start_day_warning"), variant: :warning) %>
         <% end %>
-        <% if Current.user.admin? && preview_features_enabled? %>
+        <% if Current.user.admin_for?(Current.family) && preview_features_enabled? %>
           <div class="flex items-center justify-between">
             <div class="space-y-1">
               <p class="text-sm flex items-center gap-1.5">
@@ -105,7 +105,7 @@
     <% end %>
   <% end %>
 <% end %>
-<% if Current.user.admin? %>
+<% if Current.user.admin_for?(Current.family) %>
   <%= settings_section title: t(".currencies_title", moniker: family_moniker), subtitle: t(".currencies_subtitle", moniker: family_moniker_downcase) do %>
     <% selected_count_translations = t(".selected_currencies_count") %>
     <div class="space-y-4"

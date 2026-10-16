@@ -71,13 +71,13 @@ module ProviderItemOwnable
   # only for a provider whose credential is scoped to that connection.
   def manageable_by?(user)
     return false if user.blank?
-    return true if user.admin?
+    return true if user.admin_for?(family)
 
     # `user.member?` is re-checked rather than trusting ownership alone: a role
     # can change under an existing owner (Admin::UsersController#update edits it
     # in place), and a user demoted to guest must lose manage rights on a
     # connection they added while they were a member.
-    self.class.member_connectable? && owned_by?(user) && user.member?
+    self.class.member_connectable? && owned_by?(user) && user.member_for?(family)
   end
 
   private
@@ -99,6 +99,6 @@ module ProviderItemOwnable
     def owner_belongs_to_family
       return if owner.blank?
 
-      errors.add(:owner, :invalid) unless owner.family_id == family_id
+      errors.add(:owner, :invalid) unless owner.member_of?(family)
     end
 end

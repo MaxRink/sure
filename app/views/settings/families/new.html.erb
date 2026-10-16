@@ -1,0 +1,22 @@
+<% content_for :page_title, "Create family space" %>
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-bold">Create family space</h1>
+    <p class="text-sm text-gray-500">This creates an empty space and keeps your current primary family and its data unchanged.</p>
+  </div>
+
+  <%= form_with model: @family, url: settings_families_path, class: "space-y-4" do |form| %>
+    <div>
+      <%= form.label :name, "Name", class: "block text-sm font-medium" %>
+      <%= form.text_field :name, required: true, autofocus: true, class: "mt-1 w-full rounded border p-2" %>
+    </div>
+    <div>
+      <%= form.label :moniker, "Type", class: "block text-sm font-medium" %>
+      <%= form.select :moniker, Family::MONIKERS, {}, class: "mt-1 rounded border p-2" %>
+    </div>
+    <div class="flex gap-3">
+      <%= form.submit "Create", class: "btn btn-primary" %>
+      <%= link_to "Cancel", settings_families_path, class: "btn btn-secondary" %>
+    </div>
+  <% end %>
+</div>

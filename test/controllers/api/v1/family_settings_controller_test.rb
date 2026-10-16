@@ -76,6 +76,26 @@ class Api::V1::FamilySettingsControllerTest < ActionDispatch::IntegrationTest
     api_key_without_read&.destroy
   end
 
+  test "selects a member family through the explicit header" do
+    second_family = Family.create!(name: "Second API family", currency: "EUR")
+    FamilyMembership.create!(user: @user, family: second_family, role: "member")
+
+    get api_v1_family_settings_url,
+      headers: api_headers(@api_key).merge("X-Sure-Family-Id" => second_family.id)
+
+    assert_response :success
+    assert_equal second_family.id, JSON.parse(response.body)["id"]
+  end
+
+  test "rejects a family header for a non-member" do
+    outsider = Family.create!(name: "Outsider API family", currency: "EUR")
+
+    get api_v1_family_settings_url,
+      headers: api_headers(@api_key).merge("X-Sure-Family-Id" => outsider.id)
+
+    assert_response :forbidden
+  end
+
   private
 
     def api_headers(api_key)

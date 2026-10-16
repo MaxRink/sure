@@ -58,7 +58,7 @@
           </div>
         </div>
 
-        <% if Current.user&.admin? %>
+        <% if Current.user&.admin_for?(Current.family) %>
           <div class="ml-auto flex items-center gap-2">
             <% if coinbase_item.requires_update? %>
               <%= render DS::Link.new(

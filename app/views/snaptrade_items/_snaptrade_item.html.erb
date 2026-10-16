@@ -56,7 +56,7 @@
           </div>
         </div>
 
-        <% if Current.user&.admin? %>
+        <% if Current.user&.admin_for?(Current.family) %>
           <div class="flex items-center gap-2">
             <% if snaptrade_item.requires_update? || !snaptrade_registered %>
               <%= render DS::Link.new(
@@ -128,7 +128,7 @@
           activities_pending: activities_pending
         ) %>
 
-        <% if Current.user&.admin? %>
+        <% if Current.user&.admin_for?(Current.family) %>
           <% if unlinked_count > 0 && snaptrade_item.accounts.empty? %>
             <%# No accounts imported yet - show prominent setup prompt %>
             <div class="p-4 flex flex-col gap-3 items-center justify-center">

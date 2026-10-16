@@ -22,6 +22,8 @@ class User < ApplicationRecord
   end
 
   belongs_to :family
+  has_many :family_memberships, dependent: :destroy
+  has_many :families, through: :family_memberships
   belongs_to :last_viewed_chat, class_name: "Chat", optional: true
   belongs_to :default_account, class_name: "Account", optional: true
   has_many :sessions, dependent: :destroy
@@ -41,6 +43,43 @@ class User < ApplicationRecord
   has_many :budget_shares_given, class_name: "BudgetShare", foreign_key: :owner_id, inverse_of: :owner, dependent: :destroy
   has_many :budget_shares_received, class_name: "BudgetShare", foreign_key: :viewer_id, inverse_of: :viewer, dependent: :destroy
   accepts_nested_attributes_for :family, update_only: true
+
+  def membership_for(family)
+    family_memberships.find_by(family_id: family.id)
+  end
+
+  def member_of?(family)
+    return false unless family.present?
+    return true if family_memberships.exists?(family_id: family.id)
+
+    # Compatibility for legacy rows before the membership backfill.
+    family_id == family.id
+  end
+
+  def admin_for?(family)
+    return false unless family.present?
+    return true if super_admin?
+
+    membership = membership_for(family)
+    return membership.admin? if membership
+
+    # Existing installations and fixture loads can predate the membership
+    # backfill. Preserve the immutable home-family role until that row exists.
+    family_id == family.id && role == "admin"
+  end
+
+  # A family member may write only within the family currently selected for the
+  # request. The legacy role remains the home-family compatibility value; this
+  # helper is deliberately membership-scoped for multi-family callers.
+  def member_for?(family)
+    return false unless family.present?
+    return true if super_admin?
+
+    membership = membership_for(family)
+    return membership.role.in?(%w[admin member]) if membership
+
+    family_id == family.id && role.in?(%w[admin member])
+  end
 
   MFA_BACKUP_CODE_COUNT = 8
 
@@ -76,6 +115,12 @@ class User < ApplicationRecord
 
   before_validation :apply_ui_layout_defaults
   before_validation :apply_role_based_ui_defaults
+  after_create :ensure_home_family_membership
+
+  def ensure_home_family_membership
+    return unless family_id
+    family_memberships.create!(family_id: family_id, role: super_admin? ? "admin" : role)
+  end
 
   # Returns the appropriate role for a new user creating a family.
   # The very first user of an instance becomes super_admin; subsequent users
@@ -162,11 +207,15 @@ class User < ApplicationRecord
   end
 
   def accessible_accounts
-    family.accounts.accessible_by(self)
+    scoped_family.accounts.accessible_by(self)
   end
 
   def finance_accounts
-    family.accounts.included_in_finances_for(self)
+    scoped_family.accounts.included_in_finances_for(self)
+  end
+
+  def scoped_family
+    Current.user == self && Current.family ? Current.family : family
   end
 
   # Other family members who have granted this user access to their personal
@@ -357,7 +406,8 @@ class User < ApplicationRecord
   end
 
   def can_deactivate
-    if admin? && family.users.count > 1
+    family_user_ids = (family.users.where(active: true).pluck(:id) + family.members.where(active: true).pluck(:id)).uniq
+    if admin_for?(family) && family_user_ids.size > 1
       errors.add(:base, :cannot_deactivate_admin_with_other_users)
     end
   end
@@ -841,16 +891,16 @@ class User < ApplicationRecord
     end
 
     def last_user_in_family?
-      family.users.count == 1
+      family.members.count == 1
     end
 
     def reassign_owned_accounts!
       account_ids = owned_accounts.pluck(:id)
       return if account_ids.empty?
 
-      new_owner = family.users.where.not(id: id)
+      new_owner = family.members.where.not(id: id)
                         .find_by(role: %w[admin super_admin]) ||
-                  family.users.where.not(id: id)
+                  family.members.where.not(id: id)
                         .order(:created_at).first
 
       return unless new_owner

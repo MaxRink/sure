@@ -4,10 +4,11 @@ nav_sections = [
     header: t(".general_section_title"),
     items: [
       { label: t(".accounts_label"), path: accounts_path, icon: "layers" },
-      { label: t(".bank_sync_label"), path: settings_providers_path, icon: "banknote", if: Current.user&.admin? },
+      { label: t(".bank_sync_label"), path: settings_providers_path, icon: "banknote", if: Current.user&.admin_for?(Current.family) },
       { label: t(".preferences_label"), path: settings_preferences_path, icon: "bolt" },
       { label: t(".appearance_label"), path: settings_appearance_path, icon: "palette" },
       { label: t(".profile_label"), path: settings_profile_path, icon: "circle-user" },
+      { label: "Families", path: settings_families_path, icon: "users-round" },
       { label: t(".security_label"), path: settings_security_path, icon: "shield-check" },
       { label: t(".payment_label"), path: settings_payment_path, icon: "circle-dollar-sign", if: !self_hosted? && Current.family&.can_manage_subscription? }
     ]
@@ -20,11 +21,11 @@ nav_sections = [
       { label: t(".rules_label"), path: rules_path, icon: "git-branch" },
       { label: t(".merchants_label"), path: family_merchants_path, icon: "store" },
       { label: t(".recurring_transactions_label"), path: recurring_transactions_path, icon: "repeat" },
-      { label: t(".statement_vault_label"), path: account_statements_path, icon: "archive", if: Current.user&.admin? }
+      { label: t(".statement_vault_label"), path: account_statements_path, icon: "archive", if: Current.user&.admin_for?(Current.family) }
     ]
   },
   (
-    Current.user&.admin? ? {
+    Current.user&.admin_for?(Current.family) ? {
       header: t(".advanced_section_title"),
       items: [
         { label: t(".ai_prompts_label"), path: settings_ai_prompts_path, icon: "bot" },

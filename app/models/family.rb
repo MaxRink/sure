@@ -46,7 +46,15 @@ class Family < ApplicationRecord
   CATEGORIZATION_PROVIDERS = %w[llm jev].freeze
   SHARING_DEFAULTS = %w[shared private].freeze
 
+  # `users` remains the legacy home-family association. Use `members` for
+  # authorization and active-family UI; changing the legacy association would
+  # silently change ownership semantics for existing data.
   has_many :users, dependent: :destroy
+  alias_method :home_users, :users
+  has_many :family_memberships, dependent: :destroy
+  has_many :members, through: :family_memberships, source: :user
+
+  has_many :admins, -> { where(family_memberships: { role: "admin" }) }, through: :family_memberships, source: :user
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
 

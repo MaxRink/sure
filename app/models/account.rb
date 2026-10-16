@@ -782,7 +782,7 @@ class Account < ApplicationRecord
     # Guests get read_only, everyone else read_write. This mirrors
     # Family#auto_share_existing_accounts_with so a guest's permission on an
     # account is the same whether they joined before or after it was created.
-    records = family.users.where.not(id: owner_id).pluck(:id, :role).map do |user_id, role|
+    records = family.members.where.not(id: owner_id).pluck(:id, :role).map do |user_id, role|
       { account_id: id, user_id: user_id,
         permission: role == "guest" ? "read_only" : "read_write",
         include_in_finances: true, created_at: Time.current, updated_at: Time.current }

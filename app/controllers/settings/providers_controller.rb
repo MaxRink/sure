@@ -151,7 +151,7 @@ class Settings::ProvidersController < ApplicationController
     end
 
     def ensure_admin
-      return if Current.user.admin?
+      return if Current.user.admin_for?(Current.family)
 
       redirect_to root_path, alert: t("settings.providers.not_authorized")
     end

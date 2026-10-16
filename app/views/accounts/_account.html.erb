@@ -77,7 +77,7 @@
           <% end %>
           <% menu.with_item(variant: "link", text: t("accounts.account.sharing"), href: account_sharing_path(account), icon: "users", data: { turbo_frame: :modal }) %>
 
-          <% if Current.user&.admin? %>
+          <% if Current.user&.admin_for?(Current.family) %>
             <% if !account.linked? && %w[Depository CreditCard Investment Crypto].include?(account.accountable_type) %>
               <% menu.with_item(variant: "link", text: t("accounts.account.link_provider"), href: select_provider_account_path(account), icon: "link", data: { turbo_frame: :modal }) %>
             <% elsif account.linked? %>

@@ -44,7 +44,7 @@
           </div>
         </div>
 
-        <% if Current.user&.admin? %>
+        <% if Current.user&.admin_for?(Current.family) %>
           <div class="flex items-center gap-2">
             <%= icon(
               "refresh-cw",

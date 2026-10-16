@@ -18,8 +18,9 @@ class InvitationTest < ActiveSupport::TestCase
 
     assert result
     user.reload
-    assert_equal @family.id, user.family_id
-    assert_equal "member", user.role
+    assert_equal families(:empty).id, user.family_id
+    assert_equal "admin", user.role
+    assert_equal "member", user.membership_for(@family).role
     invitation.reload
     assert invitation.accepted_at.present?
   end
@@ -48,7 +49,8 @@ class InvitationTest < ActiveSupport::TestCase
     assert result
     user.reload
     assert_equal original_family_id, user.family_id
-    assert_equal "admin", user.role
+    assert_equal "member", user.role
+    assert_equal "admin", user.membership_for(@family).role
     invitation.reload
     assert invitation.accepted_at.present?
   end
@@ -148,7 +150,7 @@ class InvitationTest < ActiveSupport::TestCase
     assert_includes invitation.errors[:email], "has already been invited to this family"
   end
 
-  test "accept_for refuses when invitee owns accounts that would be orphaned" do
+  test "accept_for preserves owned accounts when adding a second family" do
     owner = users(:empty)
     owner_family = families(:empty)
     owner.update_columns(family_id: owner_family.id, role: "admin")
@@ -162,11 +164,11 @@ class InvitationTest < ActiveSupport::TestCase
 
     result = invitation.accept_for(owner)
 
-    assert_not result, "accept_for must refuse to rehome a user away from accounts they own"
+    assert result
     owner.reload
     assert_equal owner_family.id, owner.family_id, "user.family_id must not be silently overwritten"
     invitation.reload
-    assert_nil invitation.accepted_at, "invitation must remain pending so a new flow can recover"
+    assert invitation.accepted_at.present?
     assert owner_family.accounts.exists?, "original family's accounts must remain intact"
   end
 
@@ -188,7 +190,8 @@ class InvitationTest < ActiveSupport::TestCase
 
     assert result, "a non-owner member must be free to join another family"
     member.reload
-    assert_equal @family.id, member.family_id
+    assert_equal source_family.id, member.family_id
+    assert member.member_of?(@family)
   end
 
   test "would_orphan_owned_accounts? is false when invitee owns no accounts" do
@@ -207,7 +210,7 @@ class InvitationTest < ActiveSupport::TestCase
     assert_not invitation.would_orphan_owned_accounts?(user)
   end
 
-  test "accept_for applies guest role defaults" do
+  test "accept_for keeps global role and stores guest role on membership" do
     user = users(:family_member)
     user.update!(
       family_id: @family.id,
@@ -223,14 +226,15 @@ class InvitationTest < ActiveSupport::TestCase
 
     assert result
     user.reload
-    assert_equal "guest", user.role
-    assert user.ui_layout_intro?
-    assert_not user.show_sidebar?
-    assert_not user.show_ai_sidebar?
-    assert user.ai_enabled?
+    assert_equal "member", user.role
+    assert_equal "guest", user.membership_for(@family).role
+    assert user.ui_layout_dashboard?
+    assert user.show_sidebar?
+    assert user.show_ai_sidebar?
+    assert_not user.ai_enabled?
   end
 
-  test "accept_for auto-shares existing family accounts when family shares by default" do
+  test "accept_for does not move or share accounts when adding a membership" do
     @family.update!(default_account_sharing: "shared")
     user = users(:empty)
     user.update_columns(family_id: families(:empty).id, role: "admin")
@@ -241,10 +245,11 @@ class InvitationTest < ActiveSupport::TestCase
 
     assert invitation.accept_for(user)
 
-    assert_equal expected_ids, AccountShare.where(user: user).pluck(:account_id).sort
+    assert_empty AccountShare.where(user: user).pluck(:account_id)
+    assert_equal "member", user.membership_for(@family).role
   end
 
-  test "accept_for auto-shares read_only for guest invitations" do
+  test "accept_for preserves account access boundaries for guest invitations" do
     @family.update!(default_account_sharing: "shared")
     user = users(:empty)
     user.update_columns(family_id: families(:empty).id, role: "admin")
@@ -257,9 +262,9 @@ class InvitationTest < ActiveSupport::TestCase
 
     user.reload
     shares = AccountShare.where(user: user)
-    assert_equal "guest", user.role
-    assert_equal expected_ids, shares.pluck(:account_id).sort
-    assert shares.all?(&:read_only?), "guest invitation shares must grant read_only"
+    assert_equal "admin", user.role
+    assert_equal "guest", user.membership_for(@family).role
+    assert_empty shares.pluck(:account_id)
   end
 
   test "accept_for does not auto-share when family sharing is private" do
@@ -273,10 +278,7 @@ class InvitationTest < ActiveSupport::TestCase
     end
   end
 
-  test "accepting an invitation releases provider items left behind" do
-    # The item's owner is leaving the family but the item stays. Without
-    # releasing it, the orphaned owner fails ProviderItemOwnable's same-family
-    # validation on the next save and the connection becomes unsyncable.
+  test "accepting an invitation preserves provider ownership in the home family" do
     user = users(:family_member)
     old_family = user.family
     item = PlaidItem.create!(
@@ -291,7 +293,7 @@ class InvitationTest < ActiveSupport::TestCase
 
     assert invitation.accept_for(user)
 
-    assert_nil item.reload.owner_id
+    assert_equal user.id, item.reload.owner_id
     assert_equal old_family, item.family
     assert item.valid?, "the left-behind item must still be savable"
   end
