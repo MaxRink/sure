@@ -44,7 +44,7 @@ class ApplicationController < ActionController::Base
     end
 
     def require_admin!
-      return if Current.user&.admin?
+      return if Current.user&.admin_for?(Current.family)
 
       respond_to do |format|
         format.html { redirect_to accounts_path, alert: t("shared.require_admin") }
@@ -57,7 +57,7 @@ class ApplicationController < ActionController::Base
     # Guests are read-only by design: they may view family configuration but
     # never change it.
     def require_non_guest!
-      return if Current.user && !Current.user.guest?
+      return if Current.user&.member_for?(Current.family)
 
       respond_to do |format|
         format.html { redirect_to accounts_path, alert: t("shared.require_non_guest") }

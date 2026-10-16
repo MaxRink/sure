@@ -30,6 +30,7 @@ class Api::V1::BaseController < ApplicationController
   around_action :switch_timezone
   before_action :check_api_key_rate_limit
   before_action :log_api_access
+  before_action :select_requested_family
 
 
 
@@ -323,6 +324,19 @@ class Api::V1::BaseController < ApplicationController
         ip_address: request.ip
       )
       Current.session.active_impersonator_session = nil
+    end
+
+    def select_requested_family
+      return unless Current.user
+      requested = request.headers["X-Sure-Family-Id"].presence
+      return if requested.blank?
+
+      family = Family.find_by(id: requested)
+      unless family && Current.user.member_of?(family)
+        render_json({ error: "forbidden", message: "User is not a member of the requested family" }, status: :forbidden)
+        return
+      end
+      Current.select_family!(family)
     end
 
     # Check if AI features are enabled for the current user

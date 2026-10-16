@@ -53,7 +53,7 @@ class AccountsController < ApplicationController
     # An on-chain item is admitted as soon as ONE of its accounts is accessible,
     # so the card is told which of them this viewer may actually see. nil is the
     # admin case, which visible_provider_items already lets through whole.
-    allowed_ids = Current.user&.admin? ? nil : @accessible_account_ids
+    allowed_ids = Current.user&.admin_for?(Current.family) ? nil : @accessible_account_ids
     @onchain_wallet_cards = @onchain_wallet_items.to_h do |item|
       visible = item.accounts_visible_to(allowed_ids)
       [ item.id, { accounts: visible, address_count: item.address_count_for(visible) } ]
@@ -407,7 +407,7 @@ class AccountsController < ApplicationController
     # by visible_provider_items as soon as ONE of its accounts is accessible,
     # so it must not then render the rest (#3630). Admins see every account.
     def visible_card_accounts(item)
-      return item.accounts if Current.user.admin?
+      return item.accounts if Current.user.admin_for?(Current.family)
 
       @accessible_account_id_set ||= @accessible_account_ids.to_set
       item.accounts.select { |account| @accessible_account_id_set.include?(account.id) }
@@ -417,7 +417,7 @@ class AccountsController < ApplicationController
       accessible_ids = @accessible_account_ids.to_a
 
       items.select do |item|
-        next true if Current.user.admin?
+        next true if Current.user.admin_for?(Current.family)
 
         account_ids = item.respond_to?(:accounts) ? item.accounts.map(&:id) : []
 

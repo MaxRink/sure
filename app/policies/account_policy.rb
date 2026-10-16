@@ -6,7 +6,8 @@ class AccountPolicy < ApplicationPolicy
   end
 
   def create?
-    user.member? || user.admin?
+    family = record.respond_to?(:family) && record.family || Current.family || user.family
+    user.member_of?(family) && user.admin_for?(family)
   end
 
   def update?

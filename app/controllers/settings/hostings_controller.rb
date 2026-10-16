@@ -2,8 +2,9 @@ class Settings::HostingsController < ApplicationController
   layout "settings"
 
   # Minimum accepted value for each configurable numeric LLM field. Mirrors the
-  # `min:` attribute on the form inputs in `_openai_settings.html.erb` so the
-  # controller rejects what the browser-side validator would reject.
+  # `min:` attribute on the form inputs in `_openai_settings.html.erb` and
+  # `_llm_provider_selector.html.erb`, so the controller rejects what the
+  # browser-side validator would reject.
   LLM_NUMERIC_MINIMUMS = {
     llm_context_window: 256,
     llm_max_response_tokens: 64,
@@ -270,7 +271,8 @@ class Settings::HostingsController < ApplicationController
       end
       parsed = Integer(raw, 10) rescue nil
       if parsed.nil? || parsed < minimum
-        label = t("settings.hostings.openai_settings.#{key}_label")
+        scope = key == :llm_max_items_per_call ? "llm_provider_selector" : "openai_settings"
+        label = t("settings.hostings.#{scope}.#{key.to_s.delete_prefix("llm_")}_label")
         raise Setting::ValidationError, t(".invalid_llm_budget", field: label, minimum: minimum)
       end
       Setting.public_send("#{key}=", parsed)
@@ -477,7 +479,7 @@ class Settings::HostingsController < ApplicationController
     end
 
     def ensure_admin
-      redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.admin?
+      redirect_to settings_hosting_path, alert: t(".not_authorized") unless Current.user.admin_for?(Current.family)
     end
 
     def ensure_super_admin_for_onboarding

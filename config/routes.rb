@@ -382,6 +382,7 @@ Rails.application.routes.draw do
 
   namespace :settings do
     resource :profile, only: [ :show, :destroy ]
+    resources :families, only: [ :index, :new, :create, :update ], controller: :families
     resource :preferences, only: %i[show update]
     resource :budget_shares, only: :update
     resource :appearance, only: %i[show update]

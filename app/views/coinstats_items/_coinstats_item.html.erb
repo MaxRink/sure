@@ -43,7 +43,7 @@
           </div>
         </div>
 
-        <% if Current.user&.admin? %>
+        <% if Current.user&.admin_for?(Current.family) %>
           <div class="flex items-center gap-2">
             <% if coinstats_item.requires_update? %>
               <%= render DS::Link.new(

@@ -96,7 +96,7 @@ class Api::V1::FamilyExportsController < Api::V1::BaseController
     end
 
     def ensure_admin
-      return if current_resource_owner.admin?
+      return if current_resource_owner.admin_for?(Current.family)
 
       render json: {
         error: "forbidden",

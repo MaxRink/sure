@@ -91,13 +91,13 @@ class PlaidItemsController < ApplicationController
     # A non-admin reaches this action now, so the target account needs its own
     # check -- family membership alone is not authorisation to attach a feed to
     # someone else's account.
-    return if !Current.user.admin? && !require_account_permission!(@account)
+    return if !Current.user.admin_for?(Current.family) && !require_account_permission!(@account)
 
     # Get all Plaid accounts from this family's Plaid items for the specified region
     # that are not yet linked to any account. A member only sees the items they
     # own; an admin sees the family's.
     scope = Current.family.plaid_items.where(plaid_region: @region)
-    scope = scope.owned_by(Current.user) unless Current.user.admin?
+    scope = scope.owned_by(Current.user) unless Current.user.admin_for?(Current.family)
 
     @available_plaid_accounts = scope
       .includes(:plaid_accounts)
@@ -122,7 +122,7 @@ class PlaidItemsController < ApplicationController
       return
     end
 
-    return if !Current.user.admin? && !require_account_permission!(@account)
+    return if !Current.user.admin_for?(Current.family) && !require_account_permission!(@account)
 
     # Verify the Plaid account is not already linked
     if plaid_account.account_provider.present? || plaid_account.account.present?
@@ -175,7 +175,7 @@ class PlaidItemsController < ApplicationController
     # people linking their own logins at one bank hold two legitimate Items.
     def connected_plaid_items(region)
       scope = Current.family.plaid_items.active.where(plaid_region: region)
-      scope = scope.owned_by(Current.user) unless Current.user.admin?
+      scope = scope.owned_by(Current.user) unless Current.user.admin_for?(Current.family)
       scope.ordered
     end
 
@@ -283,9 +283,27 @@ class PlaidItemsController < ApplicationController
       alert = friendly_link_token_alert(error_code, error_body["error_message"])
 
       respond_to do |format|
-        format.html { redirect_to accounts_path, alert: alert }
+        format.html do
+          if turbo_frame_request?
+            render_frame_redirect(accounts_path, alert: alert)
+          else
+            redirect_to accounts_path, alert: alert
+          end
+        end
         format.turbo_stream { stream_redirect_to(accounts_path, alert: alert) }
       end
+    end
+
+    # The Link flow is opened inside the "modal" turbo frame. A plain redirect
+    # is followed within that frame, so the flash is spent on a response whose
+    # body is discarded and the modal just closes. Answer with the frame itself
+    # carrying a redirect stream action, which performs a full-page visit.
+    def render_frame_redirect(path, alert:)
+      flash[:alert] = alert
+
+      render html: helpers.turbo_frame_tag(turbo_frame_request_id) {
+        helpers.turbo_stream.action(:redirect, path)
+      }
     end
 
     def safe_parse_plaid_error(error)

@@ -62,7 +62,7 @@ class Api::V1::UsersController < Api::V1::BaseController
     end
 
     def ensure_admin
-      return true if current_resource_owner&.admin?
+      return true if current_resource_owner&.admin_for?(Current.family)
 
       render_json({ error: "forbidden", message: "You are not authorized to perform this action" }, status: :forbidden)
       false

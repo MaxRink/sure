@@ -28,8 +28,8 @@ module ConnectorAuthorizable
     # when the provider's credential is scoped to the single connection they
     # are authenticating. Guests never may -- they are read-only by design.
     def require_connector_create!
-      return if Current.user&.admin?
-      return if connector_item_class&.member_connectable? && Current.user&.member?
+      return if Current.user&.admin_for?(Current.family)
+      return if connector_item_class&.member_connectable? && Current.user&.member_for?(Current.family)
 
       deny_connector_access!
     end

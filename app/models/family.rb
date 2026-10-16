@@ -46,7 +46,15 @@ class Family < ApplicationRecord
   CATEGORIZATION_PROVIDERS = %w[llm jev].freeze
   SHARING_DEFAULTS = %w[shared private].freeze
 
+  # `users` remains the legacy home-family association. Use `members` for
+  # authorization and active-family UI; changing the legacy association would
+  # silently change ownership semantics for existing data.
   has_many :users, dependent: :destroy
+  alias_method :home_users, :users
+  has_many :family_memberships, dependent: :destroy
+  has_many :members, through: :family_memberships, source: :user
+
+  has_many :admins, -> { where(family_memberships: { role: "admin" }) }, through: :family_memberships, source: :user
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
 
@@ -636,6 +644,15 @@ class Family < ApplicationRecord
 
   def oldest_entry_date
     entries.order(:date).first&.date || Date.current
+  end
+
+  # Earliest Transaction/Trade entry date: the family's first real activity.
+  # Unlike oldest_entry_date (any entry type; kept as-is for budgets and the
+  # AI balance sheet), valuations and opening balances don't count here, so a
+  # single old valuation can't stretch All-range charts back for years (#4007).
+  # Returns nil when the family has no Transaction/Trade entries yet.
+  def earliest_activity_date
+    entries.where(entryable_type: %w[Transaction Trade]).minimum(:date)
   end
 
   # Used for invalidating family / balance sheet related aggregation queries

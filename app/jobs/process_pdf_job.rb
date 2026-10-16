@@ -1,5 +1,5 @@
 class ProcessPdfJob < ApplicationJob
-  queue_as :medium_priority
+  queue_as :ai_low_priority
 
   discard_on(Provider::Error) do |job, err|
     Rails.logger.error("[ProcessPdfJob] Discarded permanently (job_id=#{job.job_id}, error_class=#{err.class.name})")
@@ -30,7 +30,7 @@ class ProcessPdfJob < ApplicationJob
       end
 
       # Find the user who created this import (first admin or any user in the family)
-      user = pdf_import.family.users.find_by(role: :admin) || pdf_import.family.users.first
+      user = pdf_import.family.admins.first || pdf_import.family.members.first
 
       if user
         pdf_import.send_next_steps_email(user)

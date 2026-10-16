@@ -45,7 +45,7 @@
           </div>
         </div>
 
-        <% if Current.user&.admin? %>
+        <% if Current.user&.admin_for?(Current.family) %>
           <div class="flex items-center gap-2">
             <%= icon(
               "refresh-cw",
@@ -96,7 +96,7 @@
           <div class="rounded-lg border border-secondary bg-container-inset p-3 space-y-3">
             <div class="flex items-center justify-between gap-2">
               <p class="text-sm font-medium text-primary"><%= t(".data_quality.title") %></p>
-              <% if Current.user&.admin? %>
+              <% if Current.user&.admin_for?(Current.family) %>
                 <%= button_to repair_trade_republic_item_path(trade_republic_item), method: :post,
                             class: "text-xs text-primary underline", data: { turbo: false } do %>
                   <%= t(".data_quality.repair") %>
@@ -127,7 +127,7 @@
           </div>
         <% end %>
 
-        <% if Current.user&.admin? %>
+        <% if Current.user&.admin_for?(Current.family) %>
           <% if unlinked_count > 0 && trade_republic_item.accounts.empty? %>
             <div class="p-4 flex flex-col gap-3 items-center justify-center">
               <p class="text-primary font-medium text-sm"><%= t(".accounts_need_setup") %></p>

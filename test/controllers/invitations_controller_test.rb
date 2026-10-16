@@ -53,8 +53,9 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     invitation = Invitation.order(created_at: :desc).first
     assert invitation.accepted_at.present?, "Invitation should be accepted"
     existing_user.reload
-    assert_equal @admin.family_id, existing_user.family_id
-    assert_equal "member", existing_user.role
+    assert_not_equal @admin.family_id, existing_user.family_id
+    assert_equal "admin", existing_user.role
+    assert_equal "member", existing_user.membership_for(@admin.family).role
     assert_redirected_to settings_profile_path
     assert_equal I18n.t("invitations.create.existing_user_added"), flash[:notice]
   end
@@ -107,7 +108,7 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @admin, invitation.inviter
   end
 
-  test "inviting an existing user as guest applies intro defaults" do
+  test "inviting an existing user as guest creates a guest membership" do
     existing_user = users(:empty)
     existing_user.update!(
       role: :member,
@@ -127,11 +128,8 @@ class InvitationsControllerTest < ActionDispatch::IntegrationTest
     end
 
     existing_user.reload
-    assert_equal "guest", existing_user.role
-    assert existing_user.ui_layout_intro?
-    assert_not existing_user.show_sidebar?
-    assert_not existing_user.show_ai_sidebar?
-    assert existing_user.ai_enabled?
+    assert_equal "member", existing_user.role
+    assert_equal "guest", existing_user.membership_for(@admin.family).role
   end
 
   test "re-inviting an email whose prior invitation expired succeeds instead of 500ing" do

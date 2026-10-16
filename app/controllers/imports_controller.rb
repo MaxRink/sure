@@ -198,7 +198,7 @@ class ImportsController < ApplicationController
     end
 
     def create_pdf_import(file)
-      return redirect_to new_import_path, alert: t("accounts.not_authorized") unless AccountStatement.statement_manager?(Current.user)
+      return redirect_to new_import_path, alert: t("accounts.not_authorized") unless AccountStatement.statement_manager?(Current.user, Current.family)
       return redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte) if file.size > Import::MAX_PDF_SIZE
 
       pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)

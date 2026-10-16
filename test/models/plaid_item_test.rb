@@ -26,6 +26,22 @@ class PlaidItemTest < ActiveSupport::TestCase
     assert_not @plaid_item.supports_product?("assets")
   end
 
+  test "provider management follows the active family's membership role" do
+    user = users(:family_admin)
+    other_family = families(:empty)
+    item = plaid_items(:one)
+    membership = user.family_memberships.find_or_initialize_by(family: other_family)
+    membership.update!(role: "guest")
+    item.update!(family: other_family, owner: user)
+    assert_not item.manageable_by?(user)
+
+    membership.update!(role: "member")
+    assert item.manageable_by?(user)
+
+    membership.update!(role: "admin")
+    assert item.manageable_by?(user)
+  end
+
   test "supported products tolerate a missing or non-hash raw payload" do
     @plaid_item.update!(
       available_products: [ "balance" ],

@@ -33,13 +33,11 @@ class Invitation < ApplicationRecord
     return false if user.blank?
     return false unless pending?
     return false unless emails_match?(user)
-    return false if would_orphan_owned_accounts?(user)
-
     transaction do
-      release_provider_item_ownership(user)
-      user.update!(family_id: family_id, role: role.to_s)
+      membership = user.family_memberships.find_or_initialize_by(family_id: family_id)
+      membership.role = role.to_s
+      membership.save!
       update!(accepted_at: Time.current)
-      family.auto_share_existing_accounts_with(user)
     end
     true
   end
@@ -145,6 +143,6 @@ class Invitation < ApplicationRecord
     end
 
     def inviter_is_admin
-      inviter.admin?
+      inviter.admin_for?(family)
     end
 end
