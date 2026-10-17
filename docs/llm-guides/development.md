@@ -20,9 +20,9 @@ only when that environment work has been explicitly requested. In particular,
 | Rails console | `bin/rails console` |
 | Database preparation / migration | `bin/rails db:prepare` / `bin/rails db:migrate` |
 | Database rollback / seed | `bin/rails db:rollback` / `bin/rails db:seed` |
-| Full behavioral suite | `bin/rails test` |
+| Full behavioral suite | `SURE_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/sure_test SURE_TEST_DB_NAME=sure_test RAILS_ENV=test bin/rails test` |
 | One file / test at a line | `bin/rails test test/models/account_test.rb` / `bin/rails test test/models/account_test.rb:42` |
-| Reset test database and test | `bin/rails test:db` (database-changing task) |
+| Reset test database and test | `SURE_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/sure_test SURE_TEST_DB_NAME=sure_test RAILS_ENV=test bin/rails test:db` (database-changing task) |
 | System tests | `DISABLE_PARALLELIZATION=true bin/rails test:system` |
 | Ruby lint | `bin/rubocop` |
 | Safe Ruby autocorrection | `bin/rubocop -a` (`-A` also enables unsafe corrections) |

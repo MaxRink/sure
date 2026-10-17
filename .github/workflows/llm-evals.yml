@@ -11,7 +11,8 @@ permissions:
 env:
   EVAL_MODELS: gpt-4.1
   RAILS_ENV: test
-  DATABASE_URL: postgres://postgres:postgres@localhost:5432 # pipelock:ignore
+  SURE_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/sure_test_ci_evals # pipelock:ignore
+  SURE_TEST_DB_NAME: sure_test_ci_evals
   REDIS_URL: redis://localhost:6379
   PLAID_CLIENT_ID: foo
   PLAID_SECRET: bar

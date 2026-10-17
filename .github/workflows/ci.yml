@@ -111,7 +111,8 @@ jobs:
     env:
       PLAID_CLIENT_ID: foo
       PLAID_SECRET: bar
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432 # pipelock:ignore
+      SURE_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/sure_test_ci_unit # pipelock:ignore
+      SURE_TEST_DB_NAME: sure_test_ci_unit
       REDIS_URL: redis://localhost:6379
       RAILS_ENV: test
 
@@ -162,7 +163,8 @@ jobs:
     env:
       PLAID_CLIENT_ID: foo
       PLAID_SECRET: bar
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432 # pipelock:ignore
+      SURE_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/sure_test_ci_system # pipelock:ignore
+      SURE_TEST_DB_NAME: sure_test_ci_system
       REDIS_URL: redis://localhost:6379
       RAILS_ENV: test
 
