@@ -92,6 +92,38 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert @member.family.reload.investment_contributions_as_spending?
   end
 
+  test "a guest cannot mutate a different family selected in profile parameters" do
+    sign_in @guest = users(:intro_user)
+    other_family = families(:dylan_family)
+    original_name = other_family.name
+
+    patch user_url(@guest), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: {
+          id: other_family.id,
+          name: "Attacker Family",
+          enabled_currencies: [ "USD", "SGD" ]
+        }
+      }
+    }
+
+    assert_redirected_to settings_profile_url
+    assert_equal I18n.t("users.reset.unauthorized"), flash[:alert]
+    assert_equal original_name, other_family.reload.name
+  end
+
+  test "a guest cannot reset a different family selected by request parameters" do
+    sign_in @guest = users(:intro_user)
+
+    assert_no_enqueued_jobs only: FamilyResetJob do
+      delete reset_user_url(@guest), params: { family_id: families(:dylan_family).id }
+    end
+
+    assert_redirected_to settings_profile_url
+    assert_equal I18n.t("users.reset.unauthorized"), flash[:alert]
+  end
+
   test "admin can reset family data" do
     account = accounts(:investment)
     category = categories(:income)
