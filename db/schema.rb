@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_15_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -842,6 +842,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
     t.string "assistant_type", default: "builtin", null: false
     t.boolean "auto_sync_on_login", default: true, null: false
     t.string "bills_feed_token"
+    t.boolean "categories_locked", default: false, null: false
     t.decimal "categorization_confidence_threshold", precision: 3, scale: 2, default: "0.7", null: false
     t.string "categorization_provider", default: "llm", null: false
     t.decimal "categorization_shadow_rate", precision: 3, scale: 2, default: "0.0", null: false
@@ -854,6 +855,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
     t.boolean "early_access", default: false
     t.string "enabled_currencies", array: true
     t.boolean "household_budget_enabled", default: true, null: false
+    t.boolean "investment_contributions_as_spending", default: true, null: false
     t.datetime "last_sync_all_attempted_at"
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
@@ -873,6 +875,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
     t.check_constraint "categorization_shadow_rate >= 0::numeric AND categorization_shadow_rate <= 1::numeric", name: "chk_families_categorization_shadow_rate"
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
+  end
+
+  create_table "family_memberships", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "role", default: "member", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "user_id", null: false
+    t.index ["family_id", "role"], name: "index_family_memberships_on_family_id_and_role"
+    t.index ["user_id", "family_id"], name: "index_family_memberships_on_user_id_and_family_id", unique: true
   end
 
   create_table "family_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1958,7 +1970,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text, 'chimnie'::character varying::text]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2683,6 +2695,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
     t.string "brokerage_account_id"
     t.datetime "created_at", null: false
     t.string "currency"
+    t.uuid "device_id", default: -> { "gen_random_uuid()" }, null: false
     t.uuid "family_id", null: false
     t.string "name"
     t.string "newest_event_id"
@@ -2691,6 +2704,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
     t.string "phone_number"
     t.boolean "scheduled_for_deletion", default: false, null: false
     t.text "session_blob"
+    t.datetime "session_expires_at"
     t.string "status", default: "good", null: false
     t.jsonb "timeline_cursors", default: {}, null: false
     t.datetime "updated_at", null: false
@@ -3048,6 +3062,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_11_151000) do
   add_foreign_key "insights", "families"
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
+  add_foreign_key "family_memberships", "families", on_delete: :cascade
+  add_foreign_key "family_memberships", "users", on_delete: :cascade
   add_foreign_key "kraken_accounts", "kraken_items"
   add_foreign_key "kraken_items", "families"
   add_foreign_key "llm_usages", "families"

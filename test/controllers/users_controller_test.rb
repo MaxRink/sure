@@ -66,6 +66,64 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_codes, @member.family.reload.enabled_currency_codes
   end
 
+  test "admin can stop counting investing as spending" do
+    patch user_url(@user), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @user.family.id, investment_contributions_as_spending: "0" }
+      }
+    }
+
+    assert_redirected_to settings_preferences_url
+    assert_not @user.family.reload.investment_contributions_as_spending?
+  end
+
+  test "non-admin cannot change whether investing counts as spending" do
+    sign_in @member = users(:family_member)
+
+    patch user_url(@member), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @member.family.id, investment_contributions_as_spending: "0" }
+      }
+    }
+
+    assert_redirected_to settings_profile_url
+    assert @member.family.reload.investment_contributions_as_spending?
+  end
+
+  test "a guest cannot mutate a different family selected in profile parameters" do
+    sign_in @guest = users(:intro_user)
+    other_family = families(:dylan_family)
+    original_name = other_family.name
+
+    patch user_url(@guest), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: {
+          id: other_family.id,
+          name: "Attacker Family",
+          enabled_currencies: [ "USD", "SGD" ]
+        }
+      }
+    }
+
+    assert_redirected_to settings_profile_url
+    assert_equal I18n.t("users.reset.unauthorized"), flash[:alert]
+    assert_equal original_name, other_family.reload.name
+  end
+
+  test "a guest cannot reset a different family selected by request parameters" do
+    sign_in @guest = users(:intro_user)
+
+    assert_no_enqueued_jobs only: FamilyResetJob do
+      delete reset_user_url(@guest), params: { family_id: families(:dylan_family).id }
+    end
+
+    assert_redirected_to settings_profile_url
+    assert_equal I18n.t("users.reset.unauthorized"), flash[:alert]
+  end
+
   test "admin can reset family data" do
     account = accounts(:investment)
     category = categories(:income)
