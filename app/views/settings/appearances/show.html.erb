@@ -120,7 +120,7 @@
       </div>
     <% end %>
 
-    <% if @user.admin? %>
+    <% if @user.admin_for?(Current.family) %>
       <%= form_with url: settings_appearance_path, method: :patch,
             class: "p-3",
             data: { controller: "auto-submit-form" } do |f| %>

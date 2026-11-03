@@ -30,4 +30,19 @@ class Settings::AppearancesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_appearance_path
     assert_not families(:dylan_family).reload.auto_generate_transaction_names?
   end
+
+  test "a home-family admin cannot change the setting of a family where they are only a member" do
+    admin = users(:family_admin)
+    other = families(:empty)
+    other.update!(auto_generate_transaction_names: false)
+    admin.family_memberships.find_or_create_by!(family: admin.family) { |m| m.role = "admin" }
+    admin.family_memberships.create!(family: other, role: "member")
+    sign_in admin
+    patch settings_family_url(other)
+
+    patch settings_appearance_path, params: { family: { auto_generate_transaction_names: "1" } }
+
+    assert_redirected_to settings_appearance_path
+    assert_not other.reload.auto_generate_transaction_names?
+  end
 end
