@@ -1,0 +1,12 @@
+# Home-family memberships for every fixture user, as the
+# CreateFamilyMemberships backfill gives every existing user in production.
+# Without them fixture users are no family's members, and rows created by
+# committed (non-transactional) tests would outlive the families they point to.
+<% users = YAML.safe_load(ERB.new(File.read(Rails.root.join("test/fixtures/users.yml"))).result, aliases: true) %>
+<% users.each do |label, attrs| %>
+<% next unless attrs["family"] %>
+<%= label %>_home:
+  user: <%= label %>
+  family: <%= attrs["family"] %>
+  role: <%= attrs["role"] == "super_admin" ? "admin" : (attrs["role"] || "member") %>
+<% end %>

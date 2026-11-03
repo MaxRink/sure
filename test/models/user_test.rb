@@ -1169,6 +1169,9 @@ class UserTest < ActiveSupport::TestCase
     family_ids << created_family_ids.pop(true) until created_family_ids.empty?
 
     User.connection.disable_referential_integrity do
+      # The creators committed on their own connections; their home memberships
+      # would otherwise outlive the users and families removed below.
+      FamilyMembership.where(user_id: User.where(email: %w[concurrent-first@example.com concurrent-second@example.com]).select(:id)).delete_all
       User.where(email: %w[concurrent-first@example.com concurrent-second@example.com]).delete_all
       Family.where(id: family_ids).delete_all if family_ids.any?
     end
