@@ -29,9 +29,14 @@ class UsersController < ApplicationController
       was_ai_enabled = @user.ai_enabled
       permitted_params = user_params
       family_attributes = permitted_params.delete(:family_attributes)
-      Current.family.update!(family_attributes.except(:id)) if family_attributes.present?
-
-      if @user.update(permitted_params.except(:redirect_to, :delete_profile_image))
+      if family_attributes.present? && !Current.family.update(family_attributes.except(:id))
+        # Same messages as upstream's nested family_attributes ("Family currency is invalid").
+        errors = Current.family.errors.full_messages.map { |message| "Family #{message.downcase_first}" }
+        respond_to do |format|
+          format.html { redirect_to settings_profile_path, alert: errors.to_sentence }
+          format.json { render json: { errors: errors }, status: :unprocessable_entity }
+        end
+      elsif @user.update(permitted_params.except(:redirect_to, :delete_profile_image))
         @user.profile_image.purge if should_purge_profile_image?
 
         # Add a special notice if AI was just enabled or disabled

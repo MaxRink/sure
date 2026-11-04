@@ -717,16 +717,38 @@ class Account < ApplicationRecord
   # Override destroy to handle error recovery for accounts
   def destroy
     super
+  rescue ActiveRecord::Deadlocked
+    # DestroyJob retries a deadlock, so the account stays pending_deletion (and
+    # out of the user's reach) until it gives up and restores it.
+    raise
   rescue => e
-    # If destruction fails, leave the account disabled so it stays visible and
-    # can be deleted again. DestroyJob's scheduled_for_deletion reset is for
-    # provider items; accounts track deletion in `status`.
-    if may_restore_after_failed_deletion?
-      restore_after_failed_deletion!
-    elsif may_disable?
-      disable!
-    end
+    # An error after the delete committed leaves a frozen record to restore.
+    restore_after_failed_destroy unless destroyed?
     raise e
+  end
+
+  # Leaves the account disabled so it stays visible and can be deleted again.
+  # DestroyJob's scheduled_for_deletion reset is for provider items; accounts
+  # track deletion in `status`.
+  #
+  # Mirrors the restore_after_failed_deletion and disable events, but written
+  # directly: an unrelated validation (an owner who has since left the family,
+  # say) must not leave the account hidden in pending_deletion or replace the
+  # destroy error with its own. Only while the row still holds the status this
+  # record saw, so a newer write (another worker's restore the user has since
+  # re-enabled, say) is not overwritten.
+  def restore_after_failed_destroy
+    return unless may_restore_after_failed_deletion? || may_disable?
+
+    restored = {
+      status: "disabled",
+      disabled_at: (disabled_at_in_database if pending_deletion?) || Time.current,
+      updated_at: Time.current
+    }
+    return unless Account.where(id: id, status: status_in_database).update_all(restored) == 1
+
+    assign_attributes(restored)
+    clear_attribute_changes(restored.keys)
   end
 
   def current_holdings
@@ -859,7 +881,7 @@ class Account < ApplicationRecord
     # Guests get read_only, everyone else read_write. This mirrors
     # Family#auto_share_existing_accounts_with so a guest's permission on an
     # account is the same whether they joined before or after it was created.
-    records = family.members.where.not(id: owner_id).pluck(:id, :role).map do |user_id, role|
+    records = family.members.where.not(id: owner_id).pluck("users.id", "family_memberships.role").map do |user_id, role|
       { account_id: id, user_id: user_id,
         permission: role == "guest" ? "read_only" : "read_write",
         include_in_finances: true, created_at: Time.current, updated_at: Time.current }

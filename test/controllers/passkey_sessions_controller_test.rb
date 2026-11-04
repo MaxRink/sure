@@ -54,7 +54,8 @@ class PasskeySessionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert invitation.reload.accepted_at.present?, "invitation was not accepted during passkey sign-in"
-    assert_equal "member", @user.reload.role
+    # The fork stores the invited role on the membership and keeps the global role.
+    assert_equal "member", @user.reload.membership_for(invitation.family).role
   end
 
   test "rejects an assertion without user verification" do

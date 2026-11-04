@@ -116,10 +116,23 @@ class User < ApplicationRecord
   before_validation :apply_ui_layout_defaults
   before_validation :apply_role_based_ui_defaults
   after_create :ensure_home_family_membership
+  after_update :sync_home_family_membership, if: -> { saved_change_to_role? || saved_change_to_family_id? }
 
   def ensure_home_family_membership
     return unless family_id
-    family_memberships.create!(family_id: family_id, role: super_admin? ? "admin" : role)
+    family_memberships.create!(family_id: family_id, role: home_membership_role)
+  end
+
+  # Family authorization reads the membership role, so a home role change
+  # (admin edit, OIDC role mapping, demotion to guest) must reach the home
+  # membership or the old rights would stay.
+  def sync_home_family_membership
+    return unless family_id
+    family_memberships.find_or_initialize_by(family_id: family_id).update!(role: home_membership_role)
+  end
+
+  def home_membership_role
+    super_admin? ? "admin" : role
   end
 
   # Returns the appropriate role for a new user creating a family.
@@ -204,6 +217,17 @@ class User < ApplicationRecord
 
   def admin?
     super_admin? || role == "admin"
+  end
+
+  # Setting values are shared by every family on the instance, so changing them
+  # is a super admin's job: a family admin is anyone who signed up. A
+  # self-hosted instance with a single family has no other tenant to protect,
+  # and installs that predate the super_admin role may not have one, so that
+  # family's admins keep access there.
+  def manages_instance_settings?
+    return true if super_admin?
+
+    admin? && Rails.application.config.app_mode.self_hosted? && Family.count == 1
   end
 
   def accessible_accounts
@@ -844,6 +868,13 @@ class User < ApplicationRecord
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
+  end
+
+  # The experimental Sankey comparison chart (and its feedback prompt) is
+  # opt-in on top of preview features, so a user can keep preview features
+  # enabled without a second chart rendering underneath the cash flow widget.
+  def cashflow_preview_enabled?
+    preferences&.dig("cashflow_preview_enabled") == true
   end
 
   private
