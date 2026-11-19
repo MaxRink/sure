@@ -43,3 +43,6 @@
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile*
+
+# Tauri desktop client: separate app, not used by the Rails image.
+/desktop/
