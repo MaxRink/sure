@@ -184,7 +184,17 @@ Doorkeeper.configure do
   # Require non-confidential clients to use PKCE when using an authorization code
   # to obtain an access_token (disabled by default)
   #
+  # Needs the PKCE columns on oauth_access_grants (db/migrate/*_enable_pkce.rb).
+  # Since doorkeeper 5.9.10 the authorization code flow of public clients is
+  # refused with server_error while they are missing.
+  #
   force_pkce
+
+  # Accept only S256 challenges, as advertised in
+  # OauthMetadataController (code_challenge_methods_supported). "plain" sends
+  # the verifier itself through the browser and is not allowed by OAuth 2.1
+  # or the MCP authorization spec.
+  pkce_code_challenge_methods %w[S256]
 
   # Hash access and refresh tokens before persisting them.
   # This will disable the possibility to use +reuse_access_token+
